@@ -1,20 +1,16 @@
 'use client';
 
-import { Suspense, useState } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase/client';
 import { SITE_NAME } from '@/lib/constants';
 
 const ALLOWED_DOMAIN = '@mails.tsinghua.edu.cn';
 
-/** 内部组件：使用 useSearchParams 的部分 */
-function LoginForm() {
+export default function RegisterPage() {
   const router = useRouter();
-  const searchParams = useSearchParams();
   const supabase = createClient();
-
-  const redirect = searchParams.get('redirect') || '/';
 
   const [email, setEmail] = useState('');
   const [code, setCode] = useState('');
@@ -37,8 +33,8 @@ function LoginForm() {
     e.preventDefault();
     setError(null);
     const emailLower = email.toLowerCase().trim();
-    if (!emailLower.endsWith(ALLOWED_DOMAIN)) {
-      setError(`仅限清华邮箱（${ALLOWED_DOMAIN}）登录`);
+    if (!emailLower.endsWith('@mails.tsinghua.edu.cn')) {
+      setError('仅限清华邮箱（@mails.tsinghua.edu.cn）注册');
       return;
     }
     setSubmitting(true);
@@ -64,7 +60,7 @@ function LoginForm() {
     });
     setSubmitting(false);
     if (verifyError) { setError(verifyError.message); return; }
-    router.push(redirect);
+    router.push('/');
     router.refresh();
   };
 
@@ -81,15 +77,15 @@ function LoginForm() {
     <div className="max-w-sm mx-auto pt-8 sm:pt-16">
       <div className="text-center mb-8">
         <span className="text-4xl">🎓</span>
-        <h1 className="mt-2 text-xl font-bold text-slate-800">登录 {SITE_NAME}</h1>
-        <p className="mt-1 text-sm text-slate-500">使用清华邮箱验证码登录</p>
+        <h1 className="mt-2 text-xl font-bold text-slate-800">注册 {SITE_NAME}</h1>
+        <p className="mt-1 text-sm text-slate-500">使用清华邮箱验证，仅限校内同学</p>
       </div>
 
       {step === 'form' ? (
         <form onSubmit={handleSendCode} className="space-y-4">
           <div>
-            <label htmlFor="login-email" className="block text-sm font-medium text-slate-700 mb-1">清华邮箱</label>
-            <input id="login-email" type="email" required value={email}
+            <label htmlFor="reg-email" className="block text-sm font-medium text-slate-700 mb-1">清华邮箱</label>
+            <input id="reg-email" type="email" required value={email}
               onChange={(e) => setEmail(e.target.value)}
               placeholder="your@mails.tsinghua.edu.cn"
               className="w-full px-4 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:border-brand text-sm" />
@@ -108,8 +104,8 @@ function LoginForm() {
             <span className="font-medium text-slate-700">{email}</span>
           </div>
           <div>
-            <label htmlFor="login-code" className="block text-sm font-medium text-slate-700 mb-1">验证码</label>
-            <input id="login-code" type="text" inputMode="numeric" required maxLength={6}
+            <label htmlFor="reg-code" className="block text-sm font-medium text-slate-700 mb-1">验证码</label>
+            <input id="reg-code" type="text" inputMode="numeric" required maxLength={6}
               value={code}
               onChange={(e) => setCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
               placeholder="输入 6 位验证码"
@@ -118,7 +114,7 @@ function LoginForm() {
           {error && <div className="text-sm text-red-500 bg-red-50 px-3 py-2 rounded-lg">{error}</div>}
           <button type="submit" disabled={submitting || code.length !== 6}
             className="w-full py-2.5 rounded-xl bg-brand text-white font-semibold hover:bg-brand-dark transition disabled:opacity-60">
-            {submitting ? '验证中…' : '登录'}
+            {submitting ? '验证中…' : '验证并登录'}
           </button>
           <div className="text-center">
             {resendTimer > 0
@@ -133,18 +129,9 @@ function LoginForm() {
       )}
 
       <p className="mt-6 text-center text-sm text-slate-500">
-        没有账号？
-        <Link href="/register" className="text-brand font-medium hover:underline">去注册</Link>
+        已有账号？
+        <Link href="/login" className="text-brand font-medium hover:underline">去登录</Link>
       </p>
     </div>
-  );
-}
-
-/** 页面入口：Suspense 包装，解决 useSearchParams 需要边界的问题 */
-export default function LoginPage() {
-  return (
-    <Suspense fallback={<div className="text-center pt-16 text-slate-400">加载中…</div>}>
-      <LoginForm />
-    </Suspense>
   );
 }
