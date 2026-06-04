@@ -27,7 +27,10 @@ export default function LoginPage() {
     setSubmitting(true);
     const { error: sendError } = await supabase.auth.signInWithOtp({
       email: emailLower,
-      options: { shouldCreateUser: true },
+      options: {
+        shouldCreateUser: true,
+        redirectTo: `${window.location.origin}/auth/callback`,
+      },
     });
     setSubmitting(false);
 
