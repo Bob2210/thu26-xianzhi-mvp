@@ -5,18 +5,11 @@ import Image from 'next/image';
 import { createClient } from '@/lib/supabase/client';
 import { MAX_IMAGES_PER_PRODUCT, STORAGE_BUCKET } from '@/lib/constants';
 
-/** 最大长边像素 */
 const MAX_DIMENSION = 2048;
 
-/** 用 FileReader + createImageBitmap 压缩图片 */
 async function compressImage(file: File): Promise<Blob> {
-  // 1. 读取为 ArrayBuffer
-  const buf = await file.arrayBuffer();
+  const bitmap = await createImageBitmap(file);
 
-  // 2. 解码为 ImageBitmap
-  const bitmap = await createImageBitmap(buf, { colorSpaceConversion: 'none' });
-
-  // 3. 计算缩放
   let { width, height } = bitmap;
   if (width > MAX_DIMENSION || height > MAX_DIMENSION) {
     const ratio = Math.min(MAX_DIMENSION / width, MAX_DIMENSION / height);
@@ -24,7 +17,6 @@ async function compressImage(file: File): Promise<Blob> {
     height = Math.round(height * ratio);
   }
 
-  // 4. canvas 绘制
   const canvas = document.createElement('canvas');
   canvas.width = width;
   canvas.height = height;
@@ -32,7 +24,6 @@ async function compressImage(file: File): Promise<Blob> {
   ctx.drawImage(bitmap, 0, 0, width, height);
   bitmap.close();
 
-  // 5. 输出 JPEG
   return new Promise((resolve, reject) => {
     canvas.toBlob((blob) => {
       if (!blob) { reject(new Error('压缩失败')); return; }
