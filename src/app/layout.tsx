@@ -12,7 +12,7 @@ export const viewport: Viewport = {
   width: 'device-width',
   initialScale: 1,
   maximumScale: 1,
-  themeColor: '#10b981',
+  themeColor: '#7c3aed',
 };
 
 export default function RootLayout({
@@ -27,9 +27,9 @@ export default function RootLayout({
         <main className="flex-1 w-full max-w-5xl mx-auto px-4 py-4 sm:py-6">
           {children}
         </main>
-        <footer className="border-t border-slate-200 py-6 px-4 text-center text-xs text-slate-500 space-y-2">
+        <footer className="border-t border-brand-soft py-6 px-4 text-center text-xs text-slate-500 space-y-2">
           <p>
-            © {new Date().getFullYear()} {SITE_NAME} · Made for Tsinghua 2026
+            © {new Date().getFullYear()} {SITE_NAME} · Made for Tsinghua 2026 🌸
           </p>
           <p className="max-w-xl mx-auto leading-relaxed">
             ⚠️ 本站为校内闲置物品信息展示平台，所有商品信息均由用户自行发布。
