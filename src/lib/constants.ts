@@ -1,10 +1,10 @@
 import type { ProductCategory } from './types';
 
 /** 网站基本信息 */
-export const SITE_NAME = 'THU26届毕业闲置售卖';
-export const SITE_SLOGAN = '毕业季 · 学长学姐的闲置好物';
+export const SITE_NAME = 'THU毕业闲置售卖';
+export const SITE_SLOGAN = '毕业季 · 闲置好物';
 export const SITE_DESCRIPTION =
-  '清华大学 2026 届毕业生闲置物品交易平台，把好物留给学弟学妹。';
+  '清华大学毕业生闲置物品交易平台';
 
 /** 商品分类（key 与数据库 check 约束保持一致） */
 export const CATEGORIES: { value: ProductCategory; label: string; emoji: string }[] = [
