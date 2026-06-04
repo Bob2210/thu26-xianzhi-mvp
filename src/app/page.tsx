@@ -2,14 +2,11 @@ import { createClient } from '@/lib/supabase/server';
 import ProductGrid from '@/components/ProductGrid';
 import CategoryFilter from '@/components/CategoryFilter';
 import SearchBar from '@/components/SearchBar';
+import JoinGroupButton from '@/components/JoinGroupButton';
 import type { ProductWithSeller } from '@/lib/types';
 
 export const dynamic = 'force-dynamic';
 
-/**
- * 首页：闲置商品列表。
- * 支持 ?category=xxx&q=xxx 两个查询参数。
- */
 export default async function HomePage({
   searchParams,
 }: {
@@ -68,7 +65,13 @@ export default async function HomePage({
             把陪你度过清华园的每一件好物，<br className="sm:hidden" />
             继续传递给下一位紫荆少年 🌸
           </p>
-          <div className="mt-5 flex flex-wrap gap-2 text-[11px] text-white/80">
+
+          {/* 一键入群 CTA */}
+          <div className="mt-5">
+            <JoinGroupButton />
+          </div>
+
+          <div className="mt-4 flex flex-wrap gap-2 text-[11px] text-white/80">
             <span className="px-2.5 py-1 rounded-full bg-white/15 backdrop-blur-sm">
               📚 仅限清华校内
             </span>
