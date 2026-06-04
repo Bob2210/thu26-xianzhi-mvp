@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useCallback } from 'react';
-import { Upload, X, ImageIcon } from 'lucide-react';
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
 const MAX_IMAGES = 3;
@@ -21,7 +20,6 @@ export default function ImageUploader({ images, onChange }: ImageUploaderProps) 
       reader.onload = (e) => {
         const img = new Image();
         img.onload = () => {
-          // 计算缩放尺寸，最长边不超过 4000px
           let { width, height } = img;
           const MAX_DIM = 4000;
           if (width > MAX_DIM || height > MAX_DIM) {
@@ -44,7 +42,6 @@ export default function ImageUploader({ images, onChange }: ImageUploaderProps) 
 
           canvas.toBlob((blob) => {
             if (!blob) { reject(new Error('压缩失败')); return; }
-            // 如果压缩后反而更大，用原文件
             const compressed = new File([blob], file.name, {
               type: 'image/jpeg',
               lastModified: Date.now(),
@@ -86,7 +83,6 @@ export default function ImageUploader({ images, onChange }: ImageUploaderProps) 
         const compressed = await compressImage(file);
         newFiles.push(compressed);
       } catch {
-        // 压缩失败就用原文件
         newFiles.push(file);
       }
     }
@@ -95,7 +91,6 @@ export default function ImageUploader({ images, onChange }: ImageUploaderProps) 
       const allFiles = [...images, ...newFiles];
       onChange(allFiles);
 
-      // 生成预览
       const newPreviews = await Promise.all(
         newFiles.map(f => new Promise<string>((resolve) => {
           const url = URL.createObjectURL(f);
@@ -111,8 +106,6 @@ export default function ImageUploader({ images, onChange }: ImageUploaderProps) 
     const newPreviews = previews.filter((_, i) => i !== index);
     onChange(newFiles);
     setPreviews(newPreviews);
-
-    // 释放旧 URL
     URL.revokeObjectURL(previews[index]);
   }, [images, previews, onChange]);
 
@@ -122,7 +115,9 @@ export default function ImageUploader({ images, onChange }: ImageUploaderProps) 
 
       {images.length < MAX_IMAGES && (
         <label className="flex flex-col items-center justify-center h-32 border-2 border-dashed border-gray-300 rounded-lg cursor-pointer hover:border-blue-500 transition">
-          <Upload className="w-6 h-6 text-gray-400 mb-1" />
+          <svg className="w-6 h-6 text-gray-400 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2M7 10l5-5m0 0l5 5m-5-5v12" />
+          </svg>
           <span className="text-sm text-gray-500">点击上传（最多{MAX_IMAGES}张）</span>
           <input
             type="file"
@@ -146,7 +141,9 @@ export default function ImageUploader({ images, onChange }: ImageUploaderProps) 
                 onClick={() => removeImage(i)}
                 className="absolute top-1 right-1 p-1 bg-black/50 rounded-full opacity-0 group-hover:opacity-100 transition"
               >
-                <X className="w-3 h-3 text-white" />
+                <svg className="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
               </button>
             </div>
           ))}
