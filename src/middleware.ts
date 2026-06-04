@@ -2,7 +2,8 @@ import { type NextRequest, NextResponse } from 'next/server';
 import { createServerClient, type CookieOptions } from '@supabase/ssr';
 
 export async function middleware(request: NextRequest) {
-  const { pathname } = request.nextUrl;
+  const { pathname, searchParams } = request.nextUrl;
+
   const publicPaths = ['/login', '/register', '/auth/callback'];
   const isPublic = publicPaths.some((p) => pathname.startsWith(p));
   const isStatic =
@@ -10,11 +11,15 @@ export async function middleware(request: NextRequest) {
     pathname.startsWith('/favicon') ||
     pathname.match(/\.(svg|png|jpg|jpeg|gif|webp)$/);
 
-  if (isPublic || isStatic) {
+  // 邮箱验证回调带 code 参数，放行
+  const hasAuthCode = searchParams.has('code');
+
+  if (isPublic || isStatic || hasAuthCode) {
     return NextResponse.next();
   }
 
   let response = NextResponse.next({ request: { headers: request.headers } });
+
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
@@ -36,11 +41,13 @@ export async function middleware(request: NextRequest) {
   );
 
   const { data: { user } } = await supabase.auth.getUser();
+
   if (!user) {
     const loginUrl = new URL('/login', request.url);
     loginUrl.searchParams.set('redirect', pathname);
     return NextResponse.redirect(loginUrl);
   }
+
   return response;
 }
 
