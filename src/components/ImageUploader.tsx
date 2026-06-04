@@ -5,12 +5,56 @@ import Image from 'next/image';
 import { createClient } from '@/lib/supabase/client';
 import { MAX_IMAGES_PER_PRODUCT, STORAGE_BUCKET } from '@/lib/constants';
 
+/** 最大长边像素（超过则等比例缩小） */
+const MAX_DIMENSION = 2048;
+/** 目标大小上限：3MB */
+const MAX_FILE_SIZE = 3 * 1024 * 1024;
+
 /**
- * 多图上传组件。
- * - 受控：通过 value / onChange 操作图片 public URL 数组
- * - 直接上传到 Supabase Storage（路径：{userId}/{uuid}.{ext}）
- * - 最多 MAX_IMAGES_PER_PRODUCT 张
+ * 在浏览器端压缩图片到 ≤MAX_FILE_SIZE
+ * 先用最大尺寸约束，再逐步降低 JPEG 质量
  */
+function compressImage(file: File): Promise<Blob> {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => {
+      let { width, height } = img;
+      if (width > MAX_DIMENSION || height > MAX_DIMENSION) {
+        const ratio = Math.min(MAX_DIMENSION / width, MAX_DIMENSION / height);
+        width = Math.round(width * ratio);
+        height = Math.round(height * ratio);
+      }
+
+      const canvas = document.createElement('canvas');
+      canvas.width = width;
+      canvas.height = height;
+      const ctx = canvas.getContext('2d')!;
+      ctx.drawImage(img, 0, 0, width, height);
+
+      const tryQuality = (q: number) => {
+        canvas.toBlob(
+          (blob) => {
+            if (!blob) {
+              reject(new Error('压缩失败'));
+              return;
+            }
+            if (blob.size <= MAX_FILE_SIZE || q <= 0.1) {
+              resolve(blob);
+            } else {
+              tryQuality(Math.round((q - 0.1) * 100) / 100);
+            }
+          },
+          'image/jpeg',
+          q
+        );
+      };
+      tryQuality(0.85);
+    };
+    img.onerror = () => reject(new Error('图片加载失败'));
+    img.src = URL.createObjectURL(file);
+  });
+}
+
 export default function ImageUploader({
   value,
   onChange,
@@ -44,18 +88,17 @@ export default function ImageUploader({
           setError('仅支持图片文件');
           continue;
         }
-        if (file.size > 5 * 1024 * 1024) {
-          setError('单张图片不能超过 5MB');
-          continue;
-        }
-        const ext = file.name.split('.').pop() || 'jpg';
-        // 用 crypto.randomUUID() 防止文件名冲突
+
+        const compressed = await compressImage(file);
+
+        const ext = 'jpg';
         const filename = `${userId}/${crypto.randomUUID()}.${ext}`;
         const { error: upErr } = await supabase.storage
           .from(STORAGE_BUCKET)
-          .upload(filename, file, {
+          .upload(filename, compressed, {
             cacheControl: '3600',
             upsert: false,
+            contentType: 'image/jpeg',
           });
         if (upErr) {
           setError(`上传失败：${upErr.message}`);
@@ -67,14 +110,12 @@ export default function ImageUploader({
       onChange([...value, ...newUrls]);
     } finally {
       setUploading(false);
-      // 清空 input，下次选同一文件也能再触发
       e.target.value = '';
     }
   };
 
   const remove = (url: string) => {
     onChange(value.filter((u) => u !== url));
-    // 注：MVP 阶段不删 storage 上的孤儿文件，简化实现。
   };
 
   return (
@@ -96,7 +137,7 @@ export default function ImageUploader({
         {value.length < MAX_IMAGES_PER_PRODUCT && (
           <label className="aspect-square rounded-lg border-2 border-dashed border-slate-300 flex flex-col items-center justify-center text-slate-400 text-xs cursor-pointer hover:border-brand hover:text-brand transition">
             <span className="text-2xl mb-1">＋</span>
-            <span>{uploading ? '上传中…' : `${value.length}/${MAX_IMAGES_PER_PRODUCT}`}</span>
+            <span>{uploading ? '压缩上传中…' : `${value.length}/${MAX_IMAGES_PER_PRODUCT}`}</span>
             <input
               type="file"
               accept="image/*"
@@ -110,7 +151,7 @@ export default function ImageUploader({
       </div>
       {error && <p className="mt-2 text-xs text-red-500">{error}</p>}
       <p className="mt-2 text-xs text-slate-400">
-        最多 {MAX_IMAGES_PER_PRODUCT} 张，单张 ≤ 5MB，第一张作为主图
+        最多 {MAX_IMAGES_PER_PRODUCT} 张，单张 ≤ 3MB（自动压缩），第一张作为主图
       </p>
     </div>
   );
