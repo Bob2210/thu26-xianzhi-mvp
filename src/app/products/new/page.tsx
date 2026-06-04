@@ -2,21 +2,22 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import { createClient } from '@/lib/supabase/client';
 import ImageUploader from '@/components/ImageUploader';
 import { CATEGORIES, SITE_NAME } from '@/lib/constants';
-import type { ProductCategory } from '@/lib/types';
+import type { ProductCategory, Profile } from '@/lib/types';
 
 /**
  * 发布商品页
- * 表单：标题、描述、价格、分类、多图上传。
- * 提交后跳转到商品详情页。
+ * 必须先填写联系方式才能发布。
  */
 export default function NewProductPage() {
   const router = useRouter();
   const supabase = createClient();
 
   const [userId, setUserId] = useState<string | null>(null);
+  const [profile, setProfile] = useState<Profile | null>(null);
   const [loadingUser, setLoadingUser] = useState(true);
 
   const [title, setTitle] = useState('');
@@ -28,10 +29,24 @@ export default function NewProductPage() {
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
-    supabase.auth.getUser().then(({ data }) => {
-      setUserId(data.user?.id ?? null);
+    const init = async () => {
+      const { data: userData } = await supabase.auth.getUser();
+      const uid = userData.user?.id ?? null;
+      setUserId(uid);
+
+      if (uid) {
+        const { data } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', uid)
+          .single();
+        setProfile((data ?? null) as unknown as Profile | null);
+      }
+
       setLoadingUser(false);
-    });
+    };
+
+    init();
   }, [supabase]);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -103,90 +118,87 @@ export default function NewProductPage() {
     );
   }
 
+  // 检查是否已填写联系方式
+  if (!profile?.phone && !profile?.wechat) {
+    return (
+      <div className="max-w-lg mx-auto pt-8 sm:pt-16 text-center">
+        <div className="text-5xl mb-4">📝</div>
+        <h1 className="text-xl font-bold text-slate-800 mb-2">先填写联系方式</h1>
+        <p className="text-sm text-slate-500 mb-6">
+          发布商品前需要先填写手机号或微信号
+          <br />
+          方便买家联系你
+        </p>
+        <Link
+          href="/profile"
+          className="inline-block px-6 py-2.5 rounded-xl bg-brand text-white font-semibold hover:bg-brand-dark transition"
+        >
+          去填写
+        </Link>
+      </div>
+    );
+  }
+
   return (
     <div className="max-w-lg mx-auto pt-4 sm:pt-8">
       <h1 className="text-xl font-bold text-slate-800 mb-6">发布闲置</h1>
 
       <form onSubmit={handleSubmit} className="space-y-5">
-        {/* 图片上传 */}
         <div>
           <label className="block text-sm font-medium text-slate-700 mb-1.5">
             商品图片
           </label>
-          <ImageUploader
-            value={images}
-            onChange={setImages}
-            userId={userId}
-          />
+          <ImageUploader value={images} onChange={setImages} userId={userId} />
         </div>
 
-        {/* 标题 */}
         <div>
           <label htmlFor="title" className="block text-sm font-medium text-slate-700 mb-1">
             标题
           </label>
           <input
-            id="title"
-            type="text"
-            required
-            maxLength={100}
-            value={title}
-            onChange={(e) => setTitle(e.target.value)}
+            id="title" type="text" required maxLength={100}
+            value={title} onChange={(e) => setTitle(e.target.value)}
             placeholder="例如：全新 iPad Air 保护壳"
             className="w-full px-4 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:border-brand text-sm"
           />
         </div>
 
-        {/* 描述 */}
         <div>
           <label htmlFor="description" className="block text-sm font-medium text-slate-700 mb-1">
             描述
           </label>
           <textarea
-            id="description"
-            rows={4}
-            maxLength={2000}
-            value={description}
-            onChange={(e) => setDescription(e.target.value)}
+            id="description" rows={4} maxLength={2000}
+            value={description} onChange={(e) => setDescription(e.target.value)}
             placeholder="描述商品状况、使用时间、购买渠道等…"
             className="w-full px-4 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:border-brand text-sm resize-none"
           />
           <p className="mt-1 text-xs text-slate-400">{description.length}/2000</p>
         </div>
 
-        {/* 价格 */}
         <div>
           <label htmlFor="price" className="block text-sm font-medium text-slate-700 mb-1">
             价格（元）
           </label>
           <input
-            id="price"
-            type="number"
-            required
-            min={0}
-            step={0.01}
-            value={price}
-            onChange={(e) => setPrice(e.target.value)}
+            id="price" type="number" required min={0} step={0.01}
+            value={price} onChange={(e) => setPrice(e.target.value)}
             placeholder="0.00"
             className="w-full px-4 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:border-brand text-sm"
           />
         </div>
 
-        {/* 分类 */}
         <div>
           <label htmlFor="category" className="block text-sm font-medium text-slate-700 mb-1">
             分类
           </label>
           <select
-            id="category"
-            value={category}
+            id="category" value={category}
             onChange={(e) => setCategory(e.target.value as ProductCategory)}
             className="w-full px-4 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:border-brand text-sm bg-white"
           >
             {CATEGORIES.map((c) => (
-              <option key={c.value} value={c.value}>
-                {c.emoji} {c.label}
-              </option>
+              <option key={c.value} value={c.value}>{c.emoji} {c.label}</option>
             ))}
           </select>
         </div>
@@ -196,8 +208,7 @@ export default function NewProductPage() {
         )}
 
         <button
-          type="submit"
-          disabled={submitting}
+          type="submit" disabled={submitting}
           className="w-full py-2.5 rounded-xl bg-brand text-white font-semibold hover:bg-brand-dark transition disabled:opacity-60"
         >
           {submitting ? '发布中…' : '发布闲置'}
