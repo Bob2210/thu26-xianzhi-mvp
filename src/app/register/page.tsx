@@ -27,7 +27,10 @@ export default function RegisterPage() {
     setSubmitting(true);
     const { error: sendError } = await supabase.auth.signInWithOtp({
       email: emailLower,
-      options: { shouldCreateUser: true },
+      options: {
+        shouldCreateUser: true,
+        redirectTo: `${window.location.origin}/auth/callback`,
+      },
     });
     setSubmitting(false);
 
@@ -74,11 +77,6 @@ export default function RegisterPage() {
           {submitting ? '发送中…' : '发送验证链接'}
         </button>
       </form>
-
-      <p className="mt-6 text-center text-sm text-slate-500">
-        已有账号？
-        <a href="/login" className="text-brand font-medium hover:underline">去登录</a>
-      </p>
     </div>
   );
 }
