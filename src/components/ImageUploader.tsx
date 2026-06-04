@@ -1,18 +1,21 @@
 'use client';
 
 import { useState, useCallback } from 'react';
+import { createClient } from '@/lib/supabase/client';
+import { STORAGE_BUCKET, MAX_IMAGES_PER_PRODUCT } from '@/lib/constants';
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
-const MAX_IMAGES = 3;
 
 interface ImageUploaderProps {
-  images: File[];
-  onChange: (files: File[]) => void;
+  value: string[];
+  onChange: (urls: string[]) => void;
+  userId: string;
 }
 
-export default function ImageUploader({ images, onChange }: ImageUploaderProps) {
+export default function ImageUploader({ value, onChange, userId }: ImageUploaderProps) {
+  const supabase = createClient();
   const [error, setError] = useState<string | null>(null);
-  const [previews, setPreviews] = useState<string[]>([]);
+  const [uploading, setUploading] = useState(false);
 
   const compressImage = useCallback((file: File): Promise<File> => {
     return new Promise((resolve, reject) => {
@@ -57,72 +60,95 @@ export default function ImageUploader({ images, onChange }: ImageUploaderProps) 
     });
   }, []);
 
+  const uploadFile = useCallback(async (file: File): Promise<string> => {
+    const compressed = await compressImage(file);
+    const ext = 'jpg';
+    const fileName = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
+    const filePath = `${userId}/${fileName}`;
+
+    const { error: uploadError } = await supabase.storage
+      .from(STORAGE_BUCKET)
+      .upload(filePath, compressed, {
+        cacheControl: '3600',
+        upsert: false,
+      });
+
+    if (uploadError) throw uploadError;
+
+    const { data: urlData } = supabase.storage
+      .from(STORAGE_BUCKET)
+      .getPublicUrl(filePath);
+
+    return urlData.publicUrl;
+  }, [supabase, userId, compressImage]);
+
   const handleFiles = useCallback(async (files: FileList | null) => {
     setError(null);
     if (!files || files.length === 0) return;
 
-    const remaining = MAX_IMAGES - images.length;
+    const remaining = MAX_IMAGES_PER_PRODUCT - value.length;
     if (remaining <= 0) {
-      setError(`最多上传 ${MAX_IMAGES} 张图片`);
+      setError(`最多上传 ${MAX_IMAGES_PER_PRODUCT} 张图片`);
       return;
     }
 
-    const newFiles: File[] = [];
+    setUploading(true);
     const validFiles = Array.from(files).slice(0, remaining);
 
-    for (const file of validFiles) {
-      if (!file.type.startsWith('image/')) {
-        setError('只支持图片文件');
-        continue;
+    try {
+      const urls: string[] = [];
+      for (const file of validFiles) {
+        if (!file.type.startsWith('image/')) {
+          setError('只支持图片文件');
+          continue;
+        }
+        if (file.size > MAX_FILE_SIZE) {
+          setError(`单张图片不能超过 10MB`);
+          continue;
+        }
+        try {
+          const url = await uploadFile(file);
+          urls.push(url);
+        } catch {
+          setError('图片上传失败，请重试');
+        }
       }
-      if (file.size > MAX_FILE_SIZE) {
-        setError(`单张图片不能超过 10MB`);
-        continue;
+      if (urls.length > 0) {
+        onChange([...value, ...urls]);
       }
-      try {
-        const compressed = await compressImage(file);
-        newFiles.push(compressed);
-      } catch {
-        newFiles.push(file);
-      }
+    } finally {
+      setUploading(false);
     }
+  }, [value, onChange, uploadFile]);
 
-    if (newFiles.length > 0) {
-      const allFiles = [...images, ...newFiles];
-      onChange(allFiles);
-
-      const newPreviews = await Promise.all(
-        newFiles.map(f => new Promise<string>((resolve) => {
-          const url = URL.createObjectURL(f);
-          resolve(url);
-        }))
-      );
-      setPreviews(prev => [...prev, ...newPreviews]);
+  const removeImage = useCallback(async (index: number) => {
+    // 从 Storage 删除
+    const url = value[index];
+    const idx = url.indexOf(`/object/public/${STORAGE_BUCKET}/`);
+    if (idx !== -1) {
+      const path = url.slice(idx + `/object/public/${STORAGE_BUCKET}/`.length);
+      await supabase.storage.from(STORAGE_BUCKET).remove([path]);
     }
-  }, [images, onChange, compressImage]);
-
-  const removeImage = useCallback((index: number) => {
-    const newFiles = images.filter((_, i) => i !== index);
-    const newPreviews = previews.filter((_, i) => i !== index);
-    onChange(newFiles);
-    setPreviews(newPreviews);
-    URL.revokeObjectURL(previews[index]);
-  }, [images, previews, onChange]);
+    onChange(value.filter((_, i) => i !== index));
+  }, [value, onChange, supabase]);
 
   return (
     <div className="space-y-2">
-      <label className="block text-sm font-medium text-gray-700">商品图片</label>
-
-      {images.length < MAX_IMAGES && (
+      {value.length < MAX_IMAGES_PER_PRODUCT && (
         <label className="flex flex-col items-center justify-center h-32 border-2 border-dashed border-gray-300 rounded-lg cursor-pointer hover:border-blue-500 transition">
           <svg className="w-6 h-6 text-gray-400 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2M7 10l5-5m0 0l5 5m-5-5v12" />
           </svg>
-          <span className="text-sm text-gray-500">点击上传（最多{MAX_IMAGES}张）</span>
+          {uploading ? (
+            <span className="text-sm text-gray-500">上传中…</span>
+          ) : (
+            <span className="text-sm text-gray-500">点击上传（最多{MAX_IMAGES_PER_PRODUCT}张）</span>
+          )}
           <input
             type="file"
             accept="image/*"
             multiple
+            disabled={uploading}
             className="hidden"
             onChange={(e) => handleFiles(e.target.files)}
           />
@@ -131,14 +157,15 @@ export default function ImageUploader({ images, onChange }: ImageUploaderProps) 
 
       {error && <p className="text-sm text-red-500">{error}</p>}
 
-      {previews.length > 0 && (
+      {value.length > 0 && (
         <div className="grid grid-cols-3 gap-2">
-          {previews.map((url, i) => (
+          {value.map((url, i) => (
             <div key={i} className="relative group aspect-square">
-              <img src={url} alt={`预览 ${i + 1}`} className="w-full h-full object-cover rounded-lg" />
+              <img src={url} alt={`图片 ${i + 1}`} className="w-full h-full object-cover rounded-lg" />
               <button
                 type="button"
                 onClick={() => removeImage(i)}
+                disabled={uploading}
                 className="absolute top-1 right-1 p-1 bg-black/50 rounded-full opacity-0 group-hover:opacity-100 transition"
               >
                 <svg className="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
