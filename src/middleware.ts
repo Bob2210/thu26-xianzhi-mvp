@@ -11,7 +11,6 @@ export async function middleware(request: NextRequest) {
     pathname.startsWith('/favicon') ||
     pathname.match(/\.(svg|png|jpg|jpeg|gif|webp)$/);
 
-  // 邮箱验证回调带 code 参数，放行
   const hasAuthCode = searchParams.has('code');
 
   if (isPublic || isStatic || hasAuthCode) {
