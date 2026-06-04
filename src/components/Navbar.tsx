@@ -4,13 +4,9 @@ import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
-import { SITE_NAME } from '@/lib/constants';
 
 /**
- * 顶部导航栏。
- * - 未登录：登录 / 注册
- * - 已登录：发布 / 个人中心 / 退出
- * 移动端简化为图标 + 短文案。
+ * 顶部导航栏 · 紫荆主题
  */
 export default function Navbar() {
   const router = useRouter();
@@ -19,13 +15,10 @@ export default function Navbar() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // 初次拉取登录状态
     supabase.auth.getUser().then(({ data }) => {
       setUserId(data.user?.id ?? null);
       setLoading(false);
     });
-
-    // 订阅登录状态变化
     const { data: sub } = supabase.auth.onAuthStateChange((_event, session) => {
       setUserId(session?.user?.id ?? null);
     });
@@ -39,31 +32,46 @@ export default function Navbar() {
   };
 
   return (
-    <header className="sticky top-0 z-30 bg-white/90 backdrop-blur border-b border-slate-200">
-      <div className="max-w-5xl mx-auto px-4 h-14 flex items-center justify-between">
-        <Link href="/" className="flex items-center gap-2 font-bold text-brand-dark">
-          <span className="text-xl">🎓</span>
-          <span className="text-sm sm:text-base whitespace-nowrap">{SITE_NAME}</span>
+    <header className="sticky top-0 z-30 bg-white/80 backdrop-blur-md border-b border-brand-soft">
+      <div className="max-w-5xl mx-auto px-4 h-16 flex items-center justify-between">
+        {/* Logo */}
+        <Link href="/" className="flex items-center gap-2.5 group">
+          {/* 紫荆花徽标 */}
+          <div className="relative w-9 h-9 rounded-full bg-gradient-to-br from-brand-light via-brand to-brand-thu flex items-center justify-center shadow-md group-hover:scale-105 transition">
+            <span className="text-lg">🌸</span>
+          </div>
+          <div className="flex flex-col leading-tight">
+            <span
+              className="font-bold text-base sm:text-lg bg-gradient-to-r from-brand-thu via-brand to-brand-light bg-clip-text text-transparent tracking-wide"
+              style={{ fontFamily: '"Songti SC", "STSong", "Noto Serif SC", serif' }}
+            >
+              紫荆闲置
+            </span>
+            <span className="text-[10px] text-brand/60 tracking-[0.2em] font-medium">
+              THU · 2026
+            </span>
+          </div>
         </Link>
 
-        <nav className="flex items-center gap-2 sm:gap-3 text-sm">
+        {/* 导航按钮 */}
+        <nav className="flex items-center gap-1.5 sm:gap-2 text-sm">
           {loading ? null : userId ? (
             <>
               <Link
                 href="/products/new"
-                className="px-3 py-1.5 rounded-full bg-brand text-white hover:bg-brand-dark transition"
+                className="px-3.5 py-1.5 rounded-full bg-gradient-to-r from-brand to-brand-thu text-white font-medium hover:shadow-md hover:shadow-brand/30 transition-all"
               >
                 ＋ 发布
               </Link>
               <Link
                 href="/profile"
-                className="px-3 py-1.5 rounded-full bg-slate-100 hover:bg-slate-200 transition"
+                className="px-3.5 py-1.5 rounded-full bg-brand-soft text-brand-dark font-medium hover:bg-brand-light/30 transition"
               >
                 我的
               </Link>
               <button
                 onClick={handleLogout}
-                className="px-3 py-1.5 rounded-full text-slate-600 hover:text-slate-900 transition"
+                className="px-2.5 py-1.5 rounded-full text-slate-400 hover:text-brand-dark transition text-xs sm:text-sm"
               >
                 退出
               </button>
@@ -72,13 +80,13 @@ export default function Navbar() {
             <>
               <Link
                 href="/login"
-                className="px-3 py-1.5 rounded-full bg-slate-100 hover:bg-slate-200 transition"
+                className="px-3.5 py-1.5 rounded-full bg-brand-soft text-brand-dark font-medium hover:bg-brand-light/30 transition"
               >
                 登录
               </Link>
               <Link
                 href="/register"
-                className="px-3 py-1.5 rounded-full bg-brand text-white hover:bg-brand-dark transition"
+                className="px-3.5 py-1.5 rounded-full bg-gradient-to-r from-brand to-brand-thu text-white font-medium hover:shadow-md hover:shadow-brand/30 transition-all"
               >
                 注册
               </Link>
