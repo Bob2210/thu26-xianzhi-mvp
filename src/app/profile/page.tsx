@@ -111,6 +111,29 @@ export default function ProfilePage() {
 
   const handleDelete = async (productId: string) => {
     if (!confirm('确定要删除这个商品吗？')) return;
+
+    // 先查出图片列表，删除 Storage 文件
+    const { data: product } = await supabase
+      .from('products')
+      .select('images')
+      .eq('id', productId)
+      .single();
+
+    if (product?.images?.length) {
+      const bucket = supabase.storage.from('product-images');
+      const paths = product.images
+        .map((url: string) => {
+          const idx = url.indexOf('/object/public/product-images/');
+          if (idx === -1) return null;
+          return url.slice(idx + '/object/public/product-images/'.length);
+        })
+        .filter(Boolean);
+      if (paths.length > 0) {
+        await bucket.remove(paths);
+      }
+    }
+
+    // 再删数据库记录
     const { error } = await supabase.from('products').delete().eq('id', productId);
     if (!error && userId) {
       await loadProducts(userId);
@@ -163,7 +186,6 @@ export default function ProfilePage() {
           <button
             onClick={() => {
               if (editMode) {
-                // 取消编辑，恢复原始值
                 setNickname(profile?.nickname || '');
                 setPhone(profile?.phone ?? '');
                 setWechat(profile?.wechat ?? '');
@@ -265,7 +287,6 @@ export default function ProfilePage() {
       <section>
         <h2 className="text-lg font-bold text-slate-800 mb-3">我的闲置</h2>
 
-        {/* Tab 切换 */}
         <div className="flex gap-1 mb-4 bg-slate-100 rounded-xl p-1">
           <button
             onClick={() => setTab('on_sale')}
@@ -311,7 +332,6 @@ export default function ProfilePage() {
                 key={product.id}
                 className="bg-white rounded-xl border border-slate-200 p-3 flex gap-3"
               >
-                {/* 缩略图 */}
                 <Link
                   href={`/products/${product.id}`}
                   className="shrink-0 w-20 h-20 sm:w-24 sm:h-24 rounded-lg bg-slate-100 overflow-hidden"
@@ -331,7 +351,6 @@ export default function ProfilePage() {
                   )}
                 </Link>
 
-                {/* 信息 */}
                 <div className="min-w-0 flex-1 flex flex-col justify-between">
                   <div>
                     <Link
