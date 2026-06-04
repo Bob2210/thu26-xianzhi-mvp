@@ -23,7 +23,7 @@ export const CATEGORY_LABEL: Record<ProductCategory, string> = CATEGORIES.reduce
 );
 
 /** 单个商品最多图片数 */
-export const MAX_IMAGES_PER_PRODUCT = 6;
+export const MAX_IMAGES_PER_PRODUCT = 3;
 
 /** Supabase Storage bucket 名 */
 export const STORAGE_BUCKET = 'product-images';
