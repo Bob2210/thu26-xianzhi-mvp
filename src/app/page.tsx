@@ -50,7 +50,7 @@ export default async function HomePage({
           {SITE_SLOGAN}
         </h1>
         <p className="mt-1.5 text-sm text-emerald-700/80">
-          把陪你度过紫荆岁月的好物，传给学弟学妹 🌿
+          把陪你度过紫荆岁月的好物，继续传递下去 🌿
         </p>
       </section>
 
