@@ -5,46 +5,39 @@ import Image from 'next/image';
 import { createClient } from '@/lib/supabase/client';
 import { MAX_IMAGES_PER_PRODUCT, STORAGE_BUCKET } from '@/lib/constants';
 
-/** 最大长边像素（超过则等比例缩小） */
+/** 最大长边像素 */
 const MAX_DIMENSION = 2048;
 
-function compressImage(file: File): Promise<Blob> {
+/** 用 FileReader + createImageBitmap 压缩图片 */
+async function compressImage(file: File): Promise<Blob> {
+  // 1. 读取为 ArrayBuffer
+  const buf = await file.arrayBuffer();
+
+  // 2. 解码为 ImageBitmap
+  const bitmap = await createImageBitmap(buf, { colorSpaceConversion: 'none' });
+
+  // 3. 计算缩放
+  let { width, height } = bitmap;
+  if (width > MAX_DIMENSION || height > MAX_DIMENSION) {
+    const ratio = Math.min(MAX_DIMENSION / width, MAX_DIMENSION / height);
+    width = Math.round(width * ratio);
+    height = Math.round(height * ratio);
+  }
+
+  // 4. canvas 绘制
+  const canvas = document.createElement('canvas');
+  canvas.width = width;
+  canvas.height = height;
+  const ctx = canvas.getContext('2d')!;
+  ctx.drawImage(bitmap, 0, 0, width, height);
+  bitmap.close();
+
+  // 5. 输出 JPEG
   return new Promise((resolve, reject) => {
-    try {
-      const img = new Image();
-      img.onload = () => {
-        try {
-          let { width, height } = img;
-          if (width > MAX_DIMENSION || height > MAX_DIMENSION) {
-            const ratio = Math.min(MAX_DIMENSION / width, MAX_DIMENSION / height);
-            width = Math.round(width * ratio);
-            height = Math.round(height * ratio);
-          }
-
-          const canvas = document.createElement('canvas');
-          canvas.width = width;
-          canvas.height = height;
-          const ctx = canvas.getContext('2d');
-          if (!ctx) { reject(new Error('无法创建 Canvas')); return; }
-          ctx.drawImage(img, 0, 0, width, height);
-
-          canvas.toBlob(
-            (blob) => {
-              if (!blob) { reject(new Error('压缩失败')); return; }
-              resolve(blob);
-            },
-            'image/jpeg',
-            0.8
-          );
-        } catch (e) {
-          reject(new Error('压缩处理异常'));
-        }
-      };
-      img.onerror = () => reject(new Error('图片加载失败'));
-      img.src = URL.createObjectURL(file);
-    } catch (e) {
-      reject(new Error('无法读取图片'));
-    }
+    canvas.toBlob((blob) => {
+      if (!blob) { reject(new Error('压缩失败')); return; }
+      resolve(blob);
+    }, 'image/jpeg', 0.8);
   });
 }
 
@@ -84,7 +77,7 @@ export default function ImageUploader({
           const compressed = await compressImage(file);
           const filename = `${userId}/${crypto.randomUUID()}.jpg`;
           const { error: upErr } = await supabase.storage
-            .from('product-images')
+            .from(STORAGE_BUCKET)
             .upload(filename, compressed, {
               cacheControl: '3600',
               upsert: false,
@@ -94,7 +87,7 @@ export default function ImageUploader({
             setError(`上传失败：${upErr.message}`);
             continue;
           }
-          const { data } = supabase.storage.from('product-images').getPublicUrl(filename);
+          const { data } = supabase.storage.from(STORAGE_BUCKET).getPublicUrl(filename);
           newUrls.push(data.publicUrl);
         } catch (err: any) {
           setError(err?.message || '图片处理出错');
