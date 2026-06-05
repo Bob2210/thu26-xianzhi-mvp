@@ -2,11 +2,12 @@ import { createClient } from '@/lib/supabase/server';
 import ProductGrid from '@/components/ProductGrid';
 import CategoryFilter from '@/components/CategoryFilter';
 import SearchBar from '@/components/SearchBar';
-import JoinGroupButton from '@/components/JoinGroupButton';
 import type { ProductWithSeller } from '@/lib/types';
-
 export const dynamic = 'force-dynamic';
-
+/**
+ * 首页：闲置商品列表。
+ * 支持 ?category=xxx&q=xxx 两个查询参数。
+ */
 export default async function HomePage({
   searchParams,
 }: {
@@ -23,17 +24,14 @@ export default async function HomePage({
     )
     .order('created_at', { ascending: false })
     .limit(60);
-
   if (searchParams.category) {
     query = query.eq('category', searchParams.category);
   }
   if (searchParams.q) {
     query = query.ilike('title', `%${searchParams.q}%`);
   }
-
   const { data, error } = await query;
   const products = (data ?? []) as unknown as ProductWithSeller[];
-
   return (
     <div className="space-y-5 sm:space-y-6">
       {/* Hero · 紫荆主题 */}
@@ -48,7 +46,6 @@ export default async function HomePage({
         <div className="absolute top-4 right-32 text-3xl opacity-15 select-none">
           ✨
         </div>
-
         {/* 内容 */}
         <div className="relative z-10">
           <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/20 backdrop-blur-sm text-white/95 text-xs font-medium tracking-wider mb-3">
@@ -61,17 +58,18 @@ export default async function HomePage({
           >
             紫荆为念 · 好物相传
           </h1>
-          <p className="text-white/90 text-sm sm:text-base mt-3 leading-relaxed max-w-md">
+          {/* 新增 slogan */}
+          <p
+            className="text-white/95 text-base sm:text-xl font-medium mt-2 tracking-widest"
+            style={{ fontFamily: '"Songti SC", "STSong", "Noto Serif SC", serif' }}
+          >
+            紫荆市场 · 低价淘好货
+          </p>
+          <p className="text-white/85 text-sm sm:text-base mt-3 leading-relaxed max-w-md">
             把陪你度过清华园的每一件好物，<br className="sm:hidden" />
             继续传递给下一位紫荆少年 🌸
           </p>
-
-          {/* 一键入群 CTA */}
-          <div className="mt-5">
-            <JoinGroupButton />
-          </div>
-
-          <div className="mt-4 flex flex-wrap gap-2 text-[11px] text-white/80">
+          <div className="mt-5 flex flex-wrap gap-2 text-[11px] text-white/80">
             <span className="px-2.5 py-1 rounded-full bg-white/15 backdrop-blur-sm">
               📚 仅限清华校内
             </span>
@@ -84,11 +82,9 @@ export default async function HomePage({
           </div>
         </div>
       </section>
-
       {/* 搜索 + 分类 */}
       <SearchBar />
       <CategoryFilter />
-
       {/* 商品网格 */}
       {error ? (
         <div className="py-10 text-center text-red-500 text-sm">
