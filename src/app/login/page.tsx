@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { Suspense, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase/client';
@@ -10,10 +10,10 @@ const ALLOWED_DOMAINS = ['@mails.tsinghua.edu.cn', '@tsinghua.org.cn'];
 const ALLOWED_DOMAINS_LABEL = ALLOWED_DOMAINS.join(' / ');
 
 /**
- * 登录页
+ * 登录页内部组件（使用 useSearchParams，必须包在 Suspense 里）
  * 两步流程：输入清华邮箱 → 输入验证码 → 自动登录
  */
-export default function LoginPage() {
+function LoginInner() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const supabase = createClient();
@@ -223,5 +223,17 @@ export default function LoginPage() {
         </Link>
       </p>
     </div>
+  );
+}
+
+/**
+ * 登录页（Suspense 包装层）
+ * Next.js 14 静态预渲染要求 useSearchParams 必须在 Suspense 边界内
+ */
+export default function LoginPage() {
+  return (
+    <Suspense fallback={<div className="max-w-sm mx-auto pt-16 text-center text-slate-400">加载中…</div>}>
+      <LoginInner />
+    </Suspense>
   );
 }
