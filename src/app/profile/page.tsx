@@ -155,9 +155,7 @@ export default function ProfilePage() {
 
   if (loading) {
     return (
-      <div className="max-w-lg mx-auto pt-8 text-center text-slate-400 text-sm">
-        加载中…
-      </div>
+      <div className="max-w-lg mx-auto pt-8 text-center text-slate-400 text-sm">加载中…</div>
     );
   }
 
@@ -166,10 +164,7 @@ export default function ProfilePage() {
       <div className="max-w-lg mx-auto pt-8 text-center">
         <div className="text-4xl mb-3">🔒</div>
         <p className="text-slate-500">请先登录</p>
-        <Link
-          href="/login"
-          className="mt-4 inline-block px-6 py-2.5 rounded-xl bg-brand text-white font-semibold hover:bg-brand-dark transition"
-        >
+        <Link href="/login" className="mt-4 inline-block px-6 py-2.5 rounded-xl bg-brand text-white font-semibold hover:bg-brand-dark transition">
           去登录
         </Link>
       </div>
@@ -181,18 +176,15 @@ export default function ProfilePage() {
       <section className="bg-white rounded-xl border border-slate-200 p-5">
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-lg font-bold text-slate-800">个人资料</h2>
-          <button
-            onClick={() => {
-              if (editMode) {
-                setNickname(profile?.nickname || '');
-                setPhone(profile?.phone ?? '');
-                setWechat(profile?.wechat ?? '');
-                setSaveError(null);
-              }
-              setEditMode(!editMode);
-            }}
-            className="text-sm text-brand hover:underline"
-          >
+          <button onClick={() => {
+            if (editMode) {
+              setNickname(profile?.nickname || '');
+              setPhone(profile?.phone ?? '');
+              setWechat(profile?.wechat ?? '');
+              setSaveError(null);
+            }
+            setEditMode(!editMode);
+          }} className="text-sm text-brand hover:underline">
             {editMode ? '取消' : '编辑'}
           </button>
         </div>
@@ -200,39 +192,24 @@ export default function ProfilePage() {
           <form onSubmit={handleSaveProfile} className="space-y-3">
             <div>
               <label className="block text-xs text-slate-500 mb-0.5">昵称</label>
-              <input
-                type="text"
-                value={nickname}
-                onChange={(e) => setNickname(e.target.value)}
-                className="w-full px-3 py-2 rounded-lg border border-slate-200 focus:outline-none focus:border-brand text-sm"
-              />
+              <input type="text" value={nickname} onChange={(e) => setNickname(e.target.value)}
+                className="w-full px-3 py-2 rounded-lg border border-slate-200 focus:outline-none focus:border-brand text-sm" />
             </div>
             <div>
               <label className="block text-xs text-slate-500 mb-0.5">手机号</label>
-              <input
-                type="tel"
-                value={phone}
-                onChange={(e) => setPhone(e.target.value)}
+              <input type="tel" value={phone} onChange={(e) => setPhone(e.target.value)}
                 placeholder="选填，买家联系用"
-                className="w-full px-3 py-2 rounded-lg border border-slate-200 focus:outline-none focus:border-brand text-sm"
-              />
+                className="w-full px-3 py-2 rounded-lg border border-slate-200 focus:outline-none focus:border-brand text-sm" />
             </div>
             <div>
               <label className="block text-xs text-slate-500 mb-0.5">微信号</label>
-              <input
-                type="text"
-                value={wechat}
-                onChange={(e) => setWechat(e.target.value)}
+              <input type="text" value={wechat} onChange={(e) => setWechat(e.target.value)}
                 placeholder="选填，买家联系用"
-                className="w-full px-3 py-2 rounded-lg border border-slate-200 focus:outline-none focus:border-brand text-sm"
-              />
+                className="w-full px-3 py-2 rounded-lg border border-slate-200 focus:outline-none focus:border-brand text-sm" />
             </div>
             {saveError && <p className="text-xs text-red-500">{saveError}</p>}
-            <button
-              type="submit"
-              disabled={saving}
-              className="w-full py-2 rounded-lg bg-brand text-white text-sm font-semibold hover:bg-brand-dark transition disabled:opacity-60"
-            >
+            <button type="submit" disabled={saving}
+              className="w-full py-2 rounded-lg bg-brand text-white text-sm font-semibold hover:bg-brand-dark transition disabled:opacity-60">
               {saving ? '保存中…' : '保存'}
             </button>
           </form>
@@ -242,30 +219,16 @@ export default function ProfilePage() {
               <div className="w-10 h-10 rounded-full bg-slate-200 flex items-center justify-center text-lg overflow-hidden">
                 {profile?.avatar_url ? (
                   <Image src={profile.avatar_url} alt={profile.nickname} width={40} height={40} className="object-cover" />
-                ) : (
-                  '👤'
-                )}
+                ) : '👤'}
               </div>
               <div>
                 <div className="font-semibold text-slate-800">{profile?.nickname || '用户'}</div>
                 <div className="text-xs text-slate-400">个人主页</div>
               </div>
             </div>
-            {profile?.phone && (
-              <div className="flex gap-2">
-                <span className="text-slate-400 w-10">📱</span>
-                <span className="text-slate-700">{profile.phone}</span>
-              </div>
-            )}
-            {profile?.wechat && (
-              <div className="flex gap-2">
-                <span className="text-slate-400 w-10">💬</span>
-                <span className="text-slate-700">{profile.wechat}</span>
-              </div>
-            )}
-            {!profile?.phone && !profile?.wechat && (
-              <p className="text-xs text-slate-400 py-1">还没有填写联系方式，快去编辑吧~</p>
-            )}
+            {profile?.phone && <div className="flex gap-2"><span className="text-slate-400 w-10">📱</span><span className="text-slate-700">{profile.phone}</span></div>}
+            {profile?.wechat && <div className="flex gap-2"><span className="text-slate-400 w-10">💬</span><span className="text-slate-700">{profile.wechat}</span></div>}
+            {!profile?.phone && !profile?.wechat && <p className="text-xs text-slate-400 py-1">还没有填写联系方式，快去编辑吧~</p>}
           </div>
         )}
       </section>
@@ -273,20 +236,12 @@ export default function ProfilePage() {
       <section>
         <h2 className="text-lg font-bold text-slate-800 mb-3">我的闲置</h2>
         <div className="flex gap-1 mb-4 bg-slate-100 rounded-xl p-1">
-          <button
-            onClick={() => setTab('on_sale')}
-            className={`flex-1 py-2 text-sm font-medium rounded-lg transition ${
-              tab === 'on_sale' ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-500 hover:text-slate-700'
-            }`}
-          >
+          <button onClick={() => setTab('on_sale')}
+            className={`flex-1 py-2 text-sm font-medium rounded-lg transition ${tab === 'on_sale' ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}>
             在售 ({products.filter((p) => p.status === 'on_sale').length})
           </button>
-          <button
-            onClick={() => setTab('sold')}
-            className={`flex-1 py-2 text-sm font-medium rounded-lg transition ${
-              tab === 'sold' ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-500 hover:text-slate-700'
-            }`}
-          >
+          <button onClick={() => setTab('sold')}
+            className={`flex-1 py-2 text-sm font-medium rounded-lg transition ${tab === 'sold' ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}>
             已售出 ({products.filter((p) => p.status === 'sold').length})
           </button>
         </div>
@@ -296,11 +251,7 @@ export default function ProfilePage() {
           <div className="text-center py-8 text-slate-400">
             <div className="text-3xl mb-2">{tab === 'on_sale' ? '📭' : '✅'}</div>
             <p className="text-sm">{tab === 'on_sale' ? '还没有发布闲置哦' : '还没有已售出的商品'}</p>
-            {tab === 'on_sale' && (
-              <Link href="/products/new" className="mt-3 inline-block text-brand text-sm hover:underline">
-                去发布 →
-              </Link>
-            )}
+            {tab === 'on_sale' && <Link href="/products/new" className="mt-3 inline-block text-brand text-sm hover:underline">去发布 →</Link>}
           </div>
         ) : (
           <div className="space-y-3">
@@ -315,9 +266,7 @@ export default function ProfilePage() {
                 </Link>
                 <div className="min-w-0 flex-1 flex flex-col justify-between">
                   <div>
-                    <Link href={`/products/${product.id}`} className="text-sm font-medium text-slate-800 line-clamp-2 hover:text-brand transition">
-                      {product.title}
-                    </Link>
+                    <Link href={`/products/${product.id}`} className="text-sm font-medium text-slate-800 line-clamp-2 hover:text-brand transition">{product.title}</Link>
                     <div className="mt-0.5 text-xs text-slate-400">{CATEGORY_LABEL[product.category]}</div>
                   </div>
                   <div className="flex items-center justify-between">
