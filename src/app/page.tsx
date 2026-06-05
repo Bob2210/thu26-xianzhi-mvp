@@ -22,6 +22,7 @@ export default async function HomePage({
         seller:profiles!products_seller_id_fkey (id, nickname, avatar_url, phone, wechat)
       `
     )
+    .neq('status', 'sold')
     .order('created_at', { ascending: false })
     .limit(60);
   if (searchParams.category) {
@@ -36,17 +37,9 @@ export default async function HomePage({
     <div className="space-y-5 sm:space-y-6">
       {/* Hero · 紫荆主题 */}
       <section className="relative overflow-hidden rounded-3xl p-6 sm:p-10 bg-gradient-to-br from-brand-thu via-brand to-brand-light shadow-xl shadow-brand/20">
-        {/* 装饰图案 */}
-        <div className="absolute -top-8 -right-8 text-[120px] sm:text-[160px] opacity-10 select-none rotate-12">
-          🌸
-        </div>
-        <div className="absolute bottom-2 right-6 text-4xl sm:text-5xl opacity-20 select-none -rotate-12">
-          🎓
-        </div>
-        <div className="absolute top-4 right-32 text-3xl opacity-15 select-none">
-          ✨
-        </div>
-        {/* 内容 */}
+        <div className="absolute -top-8 -right-8 text-[120px] sm:text-[160px] opacity-10 select-none rotate-12">🌸</div>
+        <div className="absolute bottom-2 right-6 text-4xl sm:text-5xl opacity-20 select-none -rotate-12">🎓</div>
+        <div className="absolute top-4 right-32 text-3xl opacity-15 select-none">✨</div>
         <div className="relative z-10">
           <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/20 backdrop-blur-sm text-white/95 text-xs font-medium tracking-wider mb-3">
             <span>🌸</span>
@@ -58,7 +51,6 @@ export default async function HomePage({
           >
             紫荆为念 · 好物相传
           </h1>
-          {/* 新增 slogan */}
           <p
             className="text-white/95 text-base sm:text-xl font-medium mt-2 tracking-widest"
             style={{ fontFamily: '"Songti SC", "STSong", "Noto Serif SC", serif' }}
@@ -70,26 +62,16 @@ export default async function HomePage({
             继续传递给下一位紫荆少年 🌸
           </p>
           <div className="mt-5 flex flex-wrap gap-2 text-[11px] text-white/80">
-            <span className="px-2.5 py-1 rounded-full bg-white/15 backdrop-blur-sm">
-              📚 仅限清华校内
-            </span>
-            <span className="px-2.5 py-1 rounded-full bg-white/15 backdrop-blur-sm">
-              🤝 当面交易
-            </span>
-            <span className="px-2.5 py-1 rounded-full bg-white/15 backdrop-blur-sm">
-              💜 校友信任
-            </span>
+            <span className="px-2.5 py-1 rounded-full bg-white/15 backdrop-blur-sm">📚 仅限清华校内</span>
+            <span className="px-2.5 py-1 rounded-full bg-white/15 backdrop-blur-sm">🤝 当面交易</span>
+            <span className="px-2.5 py-1 rounded-full bg-white/15 backdrop-blur-sm">💜 校友信任</span>
           </div>
         </div>
       </section>
-      {/* 搜索 + 分类 */}
       <SearchBar />
       <CategoryFilter />
-      {/* 商品网格 */}
       {error ? (
-        <div className="py-10 text-center text-red-500 text-sm">
-          加载失败：{error.message}
-        </div>
+        <div className="py-10 text-center text-red-500 text-sm">加载失败：{error.message}</div>
       ) : (
         <ProductGrid products={products} />
       )}
