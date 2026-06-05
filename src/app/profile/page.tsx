@@ -1,38 +1,30 @@
 'use client';
-
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
 import { createClient } from '@/lib/supabase/client';
 import { CATEGORY_LABEL } from '@/lib/constants';
+import ConfirmModal from '@/components/ConfirmModal';
 import type { Profile, ProductWithSeller } from '@/lib/types';
 
-/**
- * 个人中心
- * - 用户信息 + 编辑资料
- * - 我的商品列表（在售 / 已售出 tab）
- */
 export default function ProfilePage() {
   const router = useRouter();
   const supabase = createClient();
-
   const [userId, setUserId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [profile, setProfile] = useState<Profile | null>(null);
-
-  // 编辑资料状态
   const [editMode, setEditMode] = useState(false);
   const [nickname, setNickname] = useState('');
   const [phone, setPhone] = useState('');
   const [wechat, setWechat] = useState('');
   const [saveError, setSaveError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
-
-  // 商品列表
   const [products, setProducts] = useState<ProductWithSeller[]>([]);
   const [productsLoading, setProductsLoading] = useState(true);
   const [tab, setTab] = useState<'on_sale' | 'sold'>('on_sale');
+  const [soldTarget, setSoldTarget] = useState<string | null>(null);
+  const [soldLoading, setSoldLoading] = useState(false);
 
   const loadProfile = async (uid: string) => {
     const { data } = await supabase
@@ -61,7 +53,6 @@ export default function ProfilePage() {
       )
       .eq('seller_id', uid)
       .order('created_at', { ascending: false });
-
     setProducts((data ?? []) as unknown as ProductWithSeller[]);
     setProductsLoading(false);
   };
@@ -71,15 +62,12 @@ export default function ProfilePage() {
       const { data: userData } = await supabase.auth.getUser();
       const uid = userData.user?.id ?? null;
       setUserId(uid);
-
       if (uid) {
         await loadProfile(uid);
         await loadProducts(uid);
       }
-
       setLoading(false);
     };
-
     init();
   }, [supabase]);
 
@@ -87,7 +75,6 @@ export default function ProfilePage() {
     e.preventDefault();
     setSaveError(null);
     if (!userId) return;
-
     setSaving(true);
     const { error: updateError } = await supabase
       .from('profiles')
@@ -97,28 +84,22 @@ export default function ProfilePage() {
         wechat: wechat.trim() || null,
       })
       .eq('id', userId);
-
     setSaving(false);
-
     if (updateError) {
       setSaveError(updateError.message);
       return;
     }
-
     setEditMode(false);
     if (userId) await loadProfile(userId);
   };
 
   const handleDelete = async (productId: string) => {
     if (!confirm('确定要删除这个商品吗？')) return;
-
-    // 先查出图片列表，删除 Storage 文件
     const { data: product } = await supabase
       .from('products')
       .select('images')
       .eq('id', productId)
       .single();
-
     if (product?.images?.length) {
       const bucket = supabase.storage.from('product-images');
       const paths = product.images
@@ -132,8 +113,6 @@ export default function ProfilePage() {
         await bucket.remove(paths);
       }
     }
-
-    // 再删数据库记录
     const { error } = await supabase.from('products').delete().eq('id', productId);
     if (!error && userId) {
       await loadProducts(userId);
@@ -141,11 +120,31 @@ export default function ProfilePage() {
   };
 
   const handleMarkSold = async (productId: string) => {
-    if (!confirm('标记为已售出？')) return;
+    setSoldLoading(true);
+    const { data: product } = await supabase
+      .from('products')
+      .select('images')
+      .eq('id', productId)
+      .single();
+    if (product?.images?.length) {
+      const bucket = supabase.storage.from('product-images');
+      const paths = product.images
+        .map((url: string) => {
+          const idx = url.indexOf('/object/public/product-images/');
+          if (idx === -1) return null;
+          return url.slice(idx + '/object/public/product-images/'.length);
+        })
+        .filter(Boolean);
+      if (paths.length > 0) {
+        await bucket.remove(paths);
+      }
+    }
     const { error } = await supabase
       .from('products')
-      .update({ status: 'sold' })
+      .update({ status: 'sold', images: [] })
       .eq('id', productId);
+    setSoldLoading(false);
+    setSoldTarget(null);
     if (!error && userId) {
       await loadProducts(userId);
     }
@@ -179,7 +178,6 @@ export default function ProfilePage() {
 
   return (
     <div className="max-w-lg mx-auto space-y-6">
-      {/* 用户信息 / 编辑资料 */}
       <section className="bg-white rounded-xl border border-slate-200 p-5">
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-lg font-bold text-slate-800">个人资料</h2>
@@ -198,7 +196,6 @@ export default function ProfilePage() {
             {editMode ? '取消' : '编辑'}
           </button>
         </div>
-
         {editMode ? (
           <form onSubmit={handleSaveProfile} className="space-y-3">
             <div>
@@ -230,9 +227,7 @@ export default function ProfilePage() {
                 className="w-full px-3 py-2 rounded-lg border border-slate-200 focus:outline-none focus:border-brand text-sm"
               />
             </div>
-            {saveError && (
-              <p className="text-xs text-red-500">{saveError}</p>
-            )}
+            {saveError && <p className="text-xs text-red-500">{saveError}</p>}
             <button
               type="submit"
               disabled={saving}
@@ -246,13 +241,7 @@ export default function ProfilePage() {
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-full bg-slate-200 flex items-center justify-center text-lg overflow-hidden">
                 {profile?.avatar_url ? (
-                  <Image
-                    src={profile.avatar_url}
-                    alt={profile.nickname}
-                    width={40}
-                    height={40}
-                    className="object-cover"
-                  />
+                  <Image src={profile.avatar_url} alt={profile.nickname} width={40} height={40} className="object-cover" />
                 ) : (
                   '👤'
                 )}
@@ -275,25 +264,19 @@ export default function ProfilePage() {
               </div>
             )}
             {!profile?.phone && !profile?.wechat && (
-              <p className="text-xs text-slate-400 py-1">
-                还没有填写联系方式，快去编辑吧~
-              </p>
+              <p className="text-xs text-slate-400 py-1">还没有填写联系方式，快去编辑吧~</p>
             )}
           </div>
         )}
       </section>
 
-      {/* 我的商品 */}
       <section>
         <h2 className="text-lg font-bold text-slate-800 mb-3">我的闲置</h2>
-
         <div className="flex gap-1 mb-4 bg-slate-100 rounded-xl p-1">
           <button
             onClick={() => setTab('on_sale')}
             className={`flex-1 py-2 text-sm font-medium rounded-lg transition ${
-              tab === 'on_sale'
-                ? 'bg-white text-slate-800 shadow-sm'
-                : 'text-slate-500 hover:text-slate-700'
+              tab === 'on_sale' ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-500 hover:text-slate-700'
             }`}
           >
             在售 ({products.filter((p) => p.status === 'on_sale').length})
@@ -301,15 +284,12 @@ export default function ProfilePage() {
           <button
             onClick={() => setTab('sold')}
             className={`flex-1 py-2 text-sm font-medium rounded-lg transition ${
-              tab === 'sold'
-                ? 'bg-white text-slate-800 shadow-sm'
-                : 'text-slate-500 hover:text-slate-700'
+              tab === 'sold' ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-500 hover:text-slate-700'
             }`}
           >
             已售出 ({products.filter((p) => p.status === 'sold').length})
           </button>
         </div>
-
         {productsLoading ? (
           <div className="text-center text-sm text-slate-400 py-8">加载中…</div>
         ) : myProducts.length === 0 ? (
@@ -317,10 +297,7 @@ export default function ProfilePage() {
             <div className="text-3xl mb-2">{tab === 'on_sale' ? '📭' : '✅'}</div>
             <p className="text-sm">{tab === 'on_sale' ? '还没有发布闲置哦' : '还没有已售出的商品'}</p>
             {tab === 'on_sale' && (
-              <Link
-                href="/products/new"
-                className="mt-3 inline-block text-brand text-sm hover:underline"
-              >
+              <Link href="/products/new" className="mt-3 inline-block text-brand text-sm hover:underline">
                 去发布 →
               </Link>
             )}
@@ -328,65 +305,28 @@ export default function ProfilePage() {
         ) : (
           <div className="space-y-3">
             {myProducts.map((product) => (
-              <div
-                key={product.id}
-                className="bg-white rounded-xl border border-slate-200 p-3 flex gap-3"
-              >
-                <Link
-                  href={`/products/${product.id}`}
-                  className="shrink-0 w-20 h-20 sm:w-24 sm:h-24 rounded-lg bg-slate-100 overflow-hidden"
-                >
+              <div key={product.id} className="bg-white rounded-xl border border-slate-200 p-3 flex gap-3">
+                <Link href={`/products/${product.id}`} className="shrink-0 w-20 h-20 sm:w-24 sm:h-24 rounded-lg bg-slate-100 overflow-hidden">
                   {product.images[0] ? (
-                    <Image
-                      src={product.images[0]}
-                      alt={product.title}
-                      width={96}
-                      height={96}
-                      className="object-cover w-full h-full"
-                    />
+                    <Image src={product.images[0]} alt={product.title} width={96} height={96} className="object-cover w-full h-full" />
                   ) : (
-                    <div className="w-full h-full flex items-center justify-center text-slate-300 text-xl">
-                      📦
-                    </div>
+                    <div className="w-full h-full flex items-center justify-center text-slate-300 text-xl">📦</div>
                   )}
                 </Link>
-
                 <div className="min-w-0 flex-1 flex flex-col justify-between">
                   <div>
-                    <Link
-                      href={`/products/${product.id}`}
-                      className="text-sm font-medium text-slate-800 line-clamp-2 hover:text-brand transition"
-                    >
+                    <Link href={`/products/${product.id}`} className="text-sm font-medium text-slate-800 line-clamp-2 hover:text-brand transition">
                       {product.title}
                     </Link>
-                    <div className="mt-0.5 text-xs text-slate-400">
-                      {CATEGORY_LABEL[product.category]}
-                    </div>
+                    <div className="mt-0.5 text-xs text-slate-400">{CATEGORY_LABEL[product.category]}</div>
                   </div>
                   <div className="flex items-center justify-between">
-                    <span className="text-brand-dark font-bold text-sm">
-                      ¥{Number(product.price).toFixed(0)}
-                    </span>
+                    <span className="text-brand-dark font-bold text-sm">¥{Number(product.price).toFixed(0)}</span>
                     {tab === 'on_sale' && (
                       <div className="flex gap-2">
-                        <Link
-                          href={`/products/${product.id}/edit`}
-                          className="text-xs text-slate-500 hover:text-brand transition"
-                        >
-                          编辑
-                        </Link>
-                        <button
-                          onClick={() => handleMarkSold(product.id)}
-                          className="text-xs text-slate-500 hover:text-green-600 transition"
-                        >
-                          标记已售
-                        </button>
-                        <button
-                          onClick={() => handleDelete(product.id)}
-                          className="text-xs text-red-400 hover:text-red-600 transition"
-                        >
-                          删除
-                        </button>
+                        <Link href={`/products/${product.id}/edit`} className="text-xs text-slate-500 hover:text-brand transition">编辑</Link>
+                        <button onClick={() => setSoldTarget(product.id)} className="text-xs text-slate-500 hover:text-green-600 transition">标记已售</button>
+                        <button onClick={() => handleDelete(product.id)} className="text-xs text-red-400 hover:text-red-600 transition">删除</button>
                       </div>
                     )}
                   </div>
@@ -396,6 +336,17 @@ export default function ProfilePage() {
           </div>
         )}
       </section>
+
+      <ConfirmModal
+        open={soldTarget !== null}
+        title="确认标记已售出？"
+        message="🌸 确认后该商品图片将被永久删除，商品状态标记为「已售出」，此操作不可撤销。"
+        confirmText="确认标记"
+        cancelText="取消"
+        onConfirm={() => soldTarget && handleMarkSold(soldTarget)}
+        onCancel={() => setSoldTarget(null)}
+        loading={soldLoading}
+      />
     </div>
   );
 }
